@@ -1,0 +1,28 @@
+name: Test error when both frameworks and controls specified
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Run Kubescape with both frameworks and controls (should fail)
+        id: action
+        uses: .
+        with:
+          files: pristine/kubescape--github-action/v3.0.5/tests/fixtures/k8s/deployment.yaml
+          frameworks: NSA
+          controls: "C-0001"
+          format: junit
+          outputFile: results
+        continue-on-error: true
+      - name: Assert action failed with expected error
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: Expected action to fail when both frameworks and controls are specified, but got outcome: $OUTCOME"
+            exit 1
+          fi
+          echo "PASS: Action correctly failed when both frameworks and controls were specified"

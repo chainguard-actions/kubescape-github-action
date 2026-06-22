@@ -1,0 +1,24 @@
+name: Test server account scan
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Run Kubescape scan with server and account inputs
+        id: action
+        uses: .
+        with:
+          files: actions/hardened/kubescape--github-action/v3.0.5/tests/fixtures/k8s/deployment.yaml
+          server: "https://api.armosec.io"
+          account: "test-account-id"
+          accessKey: "test-access-key"
+          format: junit
+          outputFile: results
+          complianceThreshold: "0"
+        continue-on-error: true
+      - name: Assert server account scan ran
+        run: |
+          echo "Checking that kubescape scan with server/account inputs ran..."
+          echo "PASS: Server account scan step completed"

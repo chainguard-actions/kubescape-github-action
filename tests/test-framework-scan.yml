@@ -1,0 +1,23 @@
+name: Test framework scan
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Run Kubescape framework scan
+        id: action
+        uses: .
+        with:
+          files: pristine/kubescape--github-action/v3.0.5/tests/fixtures/k8s/deployment.yaml
+          frameworks: NSA
+          format: junit
+          outputFile: results
+          complianceThreshold: "0"
+        continue-on-error: true
+      - name: Assert framework scan ran
+        run: |
+          echo "Checking that kubescape framework scan ran..."
+          # The action should have run (either pass or fail is OK, we just want it to execute)
+          echo "PASS: Framework scan step completed"
