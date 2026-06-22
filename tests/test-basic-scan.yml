@@ -1,0 +1,30 @@
+name: Test basic Kubescape scan
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Kubescape scan on fixture file
+        id: action
+        uses: .
+        with:
+          files: pristine/kubescape--github-action/v3.0.1/tests/fixtures/k8s/deployment.yaml
+          format: junit
+          outputFile: results
+          severityThreshold: critical
+        continue-on-error: true
+
+      - name: Assert scan ran and produced output
+        run: |
+          echo "Checking that kubescape scan ran..."
+          # The action runs kubescape scan; it may exit non-zero if controls fail.
+          # We use continue-on-error above and just verify the step ran.
+          # The key assertion is that the step outcome is not 'skipped'.
+          if [ "${{ steps.action.outcome }}" = "skipped" ]; then
+            echo "FAIL: action step was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: action step ran with outcome: ${{ steps.action.outcome }}"

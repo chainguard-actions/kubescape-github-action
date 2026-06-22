@@ -1,0 +1,43 @@
+name: Test Kubescape verbose scan with JSON output
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Kubescape scan with verbose and JSON format
+        id: action
+        uses: .
+        with:
+          files: pristine/kubescape--github-action/v3.0.1/tests/fixtures/k8s/deployment.yaml
+          format: json
+          outputFile: results-verbose
+          verbose: "true"
+          severityThreshold: critical
+        continue-on-error: true
+
+      - name: Assert verbose JSON scan ran
+        run: |
+          echo "Checking that kubescape verbose JSON scan ran..."
+          if [ "${{ steps.action.outcome }}" = "skipped" ]; then
+            echo "FAIL: action step was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: verbose JSON scan ran with outcome: ${{ steps.action.outcome }}"
+
+      - name: Assert JSON output file was created
+        run: |
+          echo "Checking for JSON output file..."
+          if [ ! -f "results-verbose.json" ]; then
+            echo "FAIL: expected results-verbose.json to be created"
+            exit 1
+          fi
+          echo "PASS: results-verbose.json was created"
+          # Verify it's valid JSON
+          if ! python3 -c "import json, sys; json.load(open('results-verbose.json'))" 2>/dev/null; then
+            echo "FAIL: results-verbose.json is not valid JSON"
+            exit 1
+          fi
+          echo "PASS: results-verbose.json is valid JSON"

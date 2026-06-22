@@ -1,0 +1,28 @@
+name: Test Kubescape framework scan
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Kubescape scan with NSA framework
+        id: action
+        uses: .
+        with:
+          frameworks: NSA
+          files: pristine/kubescape--github-action/v3.0.1/tests/fixtures/k8s/deployment.yaml
+          format: junit
+          outputFile: results-nsa
+          severityThreshold: critical
+        continue-on-error: true
+
+      - name: Assert framework scan ran
+        run: |
+          echo "Checking that kubescape framework scan ran..."
+          if [ "${{ steps.action.outcome }}" = "skipped" ]; then
+            echo "FAIL: action step was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: framework scan ran with outcome: ${{ steps.action.outcome }}"

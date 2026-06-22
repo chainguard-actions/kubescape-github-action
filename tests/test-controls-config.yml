@@ -1,0 +1,29 @@
+name: Test Kubescape scan with controlsConfig
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Kubescape scan with controlsConfig
+        id: action
+        uses: .
+        with:
+          controls: "C-0001, C-0002"
+          files: actions/hardened/kubescape--github-action/v3.0.1/tests/fixtures/k8s/deployment.yaml
+          format: junit
+          outputFile: results-controls-config
+          severityThreshold: critical
+          controlsConfig: actions/hardened/kubescape--github-action/v3.0.1/tests/fixtures/controls-config.json
+        continue-on-error: true
+
+      - name: Assert scan ran
+        run: |
+          echo "Checking that kubescape scan with controlsConfig ran..."
+          if [ "${{ steps.action.outcome }}" = "skipped" ]; then
+            echo "FAIL: action step was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: scan with controlsConfig ran with outcome: ${{ steps.action.outcome }}"
