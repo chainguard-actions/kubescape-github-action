@@ -8,6 +8,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
+| v3.0.1 | [`v3.0.1`](https://github.com/chainguard-actions/kubescape-github-action/tree/v3.0.1) | [`1dd909c`](https://github.com/kubescape/github-action/commit/1dd909c626c3310e11d2fe6d3e39327620f28e68) |
 | v3.0.5 | [`v3.0.5`](https://github.com/chainguard-actions/kubescape-github-action/tree/v3.0.5) | [`c91feb3`](https://github.com/kubescape/github-action/commit/c91feb3b8dd145ff8a094f91d6836bba4abc4293) |
 
 ## Privacy
