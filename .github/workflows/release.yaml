@@ -1,0 +1,51 @@
+name: Check release with upstream
+
+on:
+  workflow_dispatch:  # Allow manual triggers
+  push:
+    branches: [ main ]
+
+env:
+  BOT_NAME: "github-actions[bot]"
+  BOT_EMAIL: "github-actions[bot]@users.noreply.github.com"
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+    - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+    - name: Update repo
+      run: |
+        . ./update.sh
+        safe_latest=$(printf '%s' "${LATEST}" | tr -d '\n\r')
+        safe_current=$(printf '%s' "${CURRENT}" | tr -d '\n\r')
+        echo "latest=${safe_latest}" >> "$GITHUB_ENV"
+        echo "current=${safe_current}" >> "$GITHUB_ENV"
+        git clone https://github.com/$GITHUB_REPOSITORY github-action; cd github-action
+        export RELEASE=$(git for-each-ref --format="%(refname:short)" --sort=-authordate --count=1 refs/tags || true)
+        rm -rf github-action
+        safe_release=$(printf '%s' "${RELEASE}" | tr -d '\n\r')
+        echo "release=${safe_release}" >> "$GITHUB_ENV"
+    - uses: peter-evans/create-pull-request@38e0b6e68b4c852a5500a94740f0e535e0d7ba54 # v4
+      if: env.latest != env.current
+      with:
+        add-paths: |
+          Dockerfile
+        commit-message: "Bump kubescape version to ${{ env.latest }}"
+        signoff: true
+        title: "[Kubescape] Bump kubescape version to ${{ env.latest }}"
+        body: |
+          # Overview
+          This PR bumps the `kubescape` version used in this action's Docker image to version ${{ env.latest }}
+        base: ${{ github.head_ref }}
+        branch: kubescape-bump-${{ env.latest }}-${{ github.head_ref || github.ref_name }}
+        delete-branch: true
+    - name: Release
+      if: env.release != env.current
+      uses: softprops/action-gh-release@c9b46fe7aad9f02afd89b12450b780f52dacfb2d
+      with:
+        tag_name: ${{ env.current }}
+        body: Bump kubescape version to ${{ env.current }}

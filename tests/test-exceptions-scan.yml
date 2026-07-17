@@ -1,0 +1,27 @@
+name: Test exceptions scan
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Run Kubescape scan with exceptions
+        id: action
+        uses: .
+        with:
+          files: hardened/tests/fixtures/k8s/deployment.yaml
+          exceptions: hardened/tests/fixtures/exceptions.json
+          format: junit
+          outputFile: results
+        continue-on-error: true
+      - name: Assert results file was created
+        run: |
+          echo "Checking for results file..."
+          if [ ! -f results.xml ]; then
+            echo "FAIL: results.xml not found"
+            ls -la || true
+            exit 1
+          fi
+          echo "PASS: results.xml exists"
+          echo "File size: $(wc -c < results.xml) bytes"
