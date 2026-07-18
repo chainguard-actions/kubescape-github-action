@@ -1,0 +1,37 @@
+name: Test kubescape scan with exceptions file
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create exceptions file
+        run: |
+          cat > /tmp/exceptions.json << 'EOF'
+          []
+          EOF
+
+      - name: Run kubescape scan with exceptions
+        id: action
+        continue-on-error: true
+        uses: .
+        with:
+          frameworks: NSA
+          files: tests/fixtures/k8s/deployment.yaml
+          format: json
+          outputFile: results-exceptions
+          severityThreshold: critical
+          exceptions: /tmp/exceptions.json
+
+      - name: Assert results file was created
+        run: |
+          echo "Checking for results-exceptions.json (json format)"
+          if [ ! -f "results-exceptions.json" ]; then
+            echo "FAIL: results-exceptions.json not found"
+            ls -la || true
+            exit 1
+          fi
+          echo "PASS: results-exceptions.json exists"
+          cat results-exceptions.json | head -30

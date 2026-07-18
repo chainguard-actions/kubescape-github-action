@@ -1,0 +1,31 @@
+name: Test basic kubescape scan
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run kubescape scan on fixture file
+        id: action
+        # The action may exit 1 if controls fail; we allow that with continue-on-error
+        continue-on-error: true
+        uses: .
+        with:
+          frameworks: NSA
+          files: tests/fixtures/k8s/deployment.yaml
+          format: junit
+          outputFile: results
+          severityThreshold: critical
+
+      - name: Assert results file was created
+        run: |
+          echo "Checking for results.xml (junit format)"
+          if [ ! -f "results.xml" ]; then
+            echo "FAIL: results.xml not found"
+            ls -la || true
+            exit 1
+          fi
+          echo "PASS: results.xml exists"
+          cat results.xml | head -30

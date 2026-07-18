@@ -1,0 +1,117 @@
+name: Kubescape
+description: Run Kubescape scan
+inputs:
+  failedThreshold:
+    description: |
+      Failure threshold is the percent above which the command fails and
+      returns exit code 1 (default 0 i.e, action fails if any control fails)
+    required: false
+  complianceThreshold:
+    description: |
+      Compliance threshold is the percent bellow which the command fails and
+      returns exit code 1 (example: if set to 100 the command will fail if any control fails)
+    required: false
+  severityThreshold:
+    description: |
+      Severity threshold is the severity of a failed control at or above which
+      the command terminates with an exit code 1 (default is "high", i.e. the
+      action fails if any High severity control fails)
+    required: false
+    default: high
+  files:
+    description: |
+      Path to the configuration yaml to scan
+    required: false
+  outputFile:
+    description: |
+      Name of the output file, without the extension.
+
+      Default is "results".
+
+      Kubescape adds the appropriate extension automatically to support both
+      single and multiple output formats.
+    required: false
+  verbose:
+    description: |
+      Display all of the input resources and not only failed resources
+    required: false
+  frameworks:
+    description: |
+      List of all frameworks to scan. Run kubescape list frameworks with
+      the Kubescape CLI to get a list of all frameworks. Either frameworks
+      have to be specified or controls.
+    required: false
+  controls:
+    description: |
+      List of all controls to scan. Run kubescape list controls with the
+      Kubescape CLI to get a list of all controls. Either frameworks
+      have to be specified or controls.
+    required: false
+  controlsConfig:
+    description: |
+      Path to the file containing controls configuration.
+    required: false
+  account:
+    description: |
+      Kubescape Portal client id.
+      Use for integrating with third-party servers.
+    required: false
+  accessKey:
+    description: |
+      Kubescape Portal accessKey.
+      Use for integrating with third-party servers.
+    required: false
+  server:
+    description: |
+      Kubescape Portal URL.
+      Use for integrating with third-party servers.
+    required: false
+  exceptions:
+    description: |
+      Path to the json file containing exceptions.
+    required: false
+  format:
+    description: |
+      Output format.
+
+      Can take one or more formats. To use one format, omit the comma, e.g
+      `format: json`. To produce results in multiple formats, separate them with
+      a comma: `format: sarif,json`.
+
+      For example, when using `output: "results"` and `format: "sarif,json"`,
+      Kubescape will produce 2 files: `results.sarif` and `results.json`. You
+      can then use `results.sarif` to publish results to Github Code Scanning
+      and `results.json` to suggest automatic fixes.
+
+      Run `kubescape scan -h` to see a list of supported formats.
+    required: false
+    default: junit
+  fixFiles:
+    description: |
+      Whether Kubescape will automatically fix files or not.
+
+      If enabled, Kubescape will make fixes to the input files. You can then
+      use these fixes to open Pull Requests from your CI/CD pipeline.
+    required: false
+    default: "false"
+  image:
+    description: |
+      An image to scan.
+
+      This option runs an image scan instead of the usual configuration scan.
+
+      Example: "nginx" or "bitnami/redis" or "quay.io/kubescape/kubescape"
+    required: false
+  registryUsername:
+    description: |
+      A username for a private registry that contains the image to be scanned.
+    required: false
+  registryPassword:
+    description: |
+      A password for a private registry that contains the image to be scanned.
+    required: false
+runs:
+  using: docker
+  image: Dockerfile
+  # image: docker://quay.io/kubescape/github-actions
+

@@ -1,0 +1,25 @@
+name: Test framework scan (NSA)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          frameworks: NSA
+          files: "tests/fixtures/deployment.yaml"
+          failedThreshold: "100"
+          format: junit
+          outputFile: results-nsa
+        continue-on-error: true
+      - name: Assert framework scan ran
+        run: |
+          echo "outcome: ${{ steps.action.outcome }}"
+          if [ "${{ steps.action.outcome }}" = "skipped" ]; then
+            echo "FAIL: action was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: NSA framework scan ran"

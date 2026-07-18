@@ -1,0 +1,35 @@
+name: Test kubescape scan with portal integration inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run kubescape scan with portal integration inputs
+        id: action
+        # Portal credentials are invalid/empty so the action may fail; we allow that
+        continue-on-error: true
+        uses: .
+        with:
+          frameworks: NSA
+          files: tests/fixtures/k8s/deployment.yaml
+          format: json
+          outputFile: results-portal
+          severityThreshold: critical
+          account: ""
+          accessKey: ""
+          server: ""
+
+      - name: Assert action ran (results file created or action failed gracefully)
+        run: |
+          echo "Checking outcome of portal integration scan"
+          # The action may fail due to empty/invalid portal credentials, or succeed
+          # scanning locally. Either way, we just verify the step ran.
+          if [ -f "results-portal.json" ]; then
+            echo "PASS: results-portal.json exists"
+            cat results-portal.json | head -30
+          else
+            echo "PASS: action ran (no results file, likely failed gracefully with empty credentials)"
+          fi

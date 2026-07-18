@@ -1,0 +1,31 @@
+name: Test kubescape scan with verbose output
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run kubescape scan with verbose flag
+        id: action
+        continue-on-error: true
+        uses: .
+        with:
+          frameworks: NSA
+          files: tests/fixtures/k8s/deployment.yaml
+          format: json
+          outputFile: results-verbose
+          severityThreshold: critical
+          verbose: "true"
+
+      - name: Assert results file was created
+        run: |
+          echo "Checking for results-verbose.json (json format)"
+          if [ ! -f "results-verbose.json" ]; then
+            echo "FAIL: results-verbose.json not found"
+            ls -la || true
+            exit 1
+          fi
+          echo "PASS: results-verbose.json exists"
+          cat results-verbose.json | head -30

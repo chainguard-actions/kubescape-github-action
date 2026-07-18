@@ -1,0 +1,32 @@
+name: Test JSON output format
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          frameworks: NSA
+          files: "tests/fixtures/deployment.yaml"
+          failedThreshold: "100"
+          format: json
+          outputFile: results-json
+        continue-on-error: true
+      - name: Assert JSON output file was created
+        run: |
+          echo "outcome: ${{ steps.action.outcome }}"
+          if [ "${{ steps.action.outcome }}" = "skipped" ]; then
+            echo "FAIL: action was skipped unexpectedly"
+            exit 1
+          fi
+          # Check that the JSON output file was created
+          if [ ! -f "results-json.json" ]; then
+            echo "FAIL: results-json.json was not created"
+            exit 1
+          fi
+          echo "PASS: JSON output file created"
+          # Verify it's valid JSON
+          cat results-json.json | python3 -c "import sys, json; json.load(sys.stdin)" && echo "PASS: valid JSON" || { echo "FAIL: invalid JSON"; exit 1; }

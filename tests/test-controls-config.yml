@@ -1,0 +1,37 @@
+name: Test kubescape scan with controls configuration file
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create controls config file
+        run: |
+          cat > /tmp/controls-config.json << 'EOF'
+          {}
+          EOF
+
+      - name: Run kubescape scan with controls config
+        id: action
+        continue-on-error: true
+        uses: .
+        with:
+          frameworks: NSA
+          files: tests/fixtures/k8s/deployment.yaml
+          format: json
+          outputFile: results-controls-config
+          severityThreshold: critical
+          controlsConfig: /tmp/controls-config.json
+
+      - name: Assert results file was created
+        run: |
+          echo "Checking for results-controls-config.json (json format)"
+          if [ ! -f "results-controls-config.json" ]; then
+            echo "FAIL: results-controls-config.json not found"
+            ls -la || true
+            exit 1
+          fi
+          echo "PASS: results-controls-config.json exists"
+          cat results-controls-config.json | head -30

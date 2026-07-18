@@ -1,0 +1,39 @@
+name: Test kubescape scan with multiple output formats
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run kubescape scan with sarif and json output formats
+        id: action
+        continue-on-error: true
+        uses: .
+        with:
+          frameworks: NSA
+          files: tests/fixtures/k8s/deployment.yaml
+          format: sarif,json
+          outputFile: multi-results
+          severityThreshold: critical
+
+      - name: Assert sarif results file was created
+        run: |
+          echo "Checking for multi-results.sarif"
+          if [ ! -f "multi-results.sarif" ]; then
+            echo "FAIL: multi-results.sarif not found"
+            ls -la || true
+            exit 1
+          fi
+          echo "PASS: multi-results.sarif exists"
+
+      - name: Assert json results file was created
+        run: |
+          echo "Checking for multi-results.json"
+          if [ ! -f "multi-results.json" ]; then
+            echo "FAIL: multi-results.json not found"
+            ls -la || true
+            exit 1
+          fi
+          echo "PASS: multi-results.json exists"

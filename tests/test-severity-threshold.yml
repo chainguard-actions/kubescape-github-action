@@ -1,0 +1,27 @@
+name: Test severity threshold
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action-low-threshold
+        uses: .
+        with:
+          frameworks: NSA
+          files: "tests/fixtures/deployment.yaml"
+          severityThreshold: low
+          format: junit
+          outputFile: results-severity
+        continue-on-error: true
+      - name: Assert action ran with severity threshold
+        run: |
+          echo "outcome: ${{ steps.action-low-threshold.outcome }}"
+          # The action should run (either pass or fail based on findings)
+          # but it should not be skipped
+          if [ "${{ steps.action-low-threshold.outcome }}" = "skipped" ]; then
+            echo "FAIL: action was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: action ran with severity threshold set to low"

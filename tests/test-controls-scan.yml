@@ -1,0 +1,30 @@
+name: Test kubescape scan with controls
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run kubescape scan with specific control
+        id: action
+        continue-on-error: true
+        uses: .
+        with:
+          controls: "C-0017"
+          files: tests/fixtures/k8s/deployment.yaml
+          format: json
+          outputFile: results-controls
+          severityThreshold: critical
+
+      - name: Assert results file was created
+        run: |
+          echo "Checking for results-controls.json (json format)"
+          if [ ! -f "results-controls.json" ]; then
+            echo "FAIL: results-controls.json not found"
+            ls -la || true
+            exit 1
+          fi
+          echo "PASS: results-controls.json exists"
+          cat results-controls.json | head -30

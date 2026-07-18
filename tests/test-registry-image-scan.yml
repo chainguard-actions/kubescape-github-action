@@ -1,0 +1,31 @@
+name: Test kubescape image scan with registry credentials
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run kubescape image scan with registry credentials
+        id: action
+        continue-on-error: true
+        uses: .
+        with:
+          image: nginx:latest
+          format: json
+          outputFile: results-image-registry
+          severityThreshold: critical
+          registryUsername: ""
+          registryPassword: ""
+
+      - name: Assert results file was created
+        run: |
+          echo "Checking for results-image-registry.json (json format)"
+          if [ ! -f "results-image-registry.json" ]; then
+            echo "FAIL: results-image-registry.json not found"
+            ls -la || true
+            exit 1
+          fi
+          echo "PASS: results-image-registry.json exists"
+          cat results-image-registry.json | head -30
