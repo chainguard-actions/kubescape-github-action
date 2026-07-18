@@ -1,4 +1,4 @@
-name: Test error - frameworks and controls both specified
+name: Test error - both failedThreshold and complianceThreshold specified
 on:
   workflow_dispatch:
 jobs:
@@ -7,16 +7,16 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Run Kubescape with both frameworks and controls (should fail)
+      - name: Run Kubescape with both threshold options (should fail)
         id: scan
         continue-on-error: true
         uses: .
         with:
           files: tests/fixtures/k8s/deployment.yaml
-          frameworks: NSA
-          controls: "C-0001"
+          failedThreshold: 50
+          complianceThreshold: 80
           format: junit
-          outputFile: results-error
+          outputFile: results-threshold-error
 
       - name: Assert action failed as expected
         env:
@@ -24,7 +24,7 @@ jobs:
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" != "failure" ]; then
-            echo "FAIL: expected action to fail when both frameworks and controls are specified, but got outcome=$OUTCOME"
+            echo "FAIL: expected action to fail when both failedThreshold and complianceThreshold are specified, but got outcome=$OUTCOME"
             exit 1
           fi
-          echo "PASS: action correctly failed when both frameworks and controls were specified"
+          echo "PASS: action correctly failed when both threshold options were specified"

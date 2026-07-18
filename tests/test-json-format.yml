@@ -1,0 +1,37 @@
+name: Test JSON format output
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Kubescape scan with JSON format
+        id: scan
+        continue-on-error: true
+        uses: .
+        with:
+          files: tests/fixtures/k8s/deployment.yaml
+          frameworks: NSA
+          format: json
+          outputFile: results-json
+          severityThreshold: critical
+          verbose: "true"
+
+      - name: Assert JSON results file was created
+        run: |
+          echo "Checking for results-json.json (json format)"
+          if [ ! -f results-json.json ]; then
+            echo "FAIL: results-json.json not found"
+            ls -la || true
+            exit 1
+          fi
+          echo "PASS: results-json.json exists"
+          # Validate it is valid JSON
+          if ! python3 -c "import json,sys; json.load(open('results-json.json'))" 2>/dev/null; then
+            echo "FAIL: results-json.json is not valid JSON"
+            cat results-json.json | head -20
+            exit 1
+          fi
+          echo "PASS: results-json.json is valid JSON"

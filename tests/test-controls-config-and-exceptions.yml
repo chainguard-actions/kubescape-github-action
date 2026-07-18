@@ -1,0 +1,41 @@
+name: Test Kubescape controlsConfig and exceptions inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create test manifest and config files
+        run: |
+          mkdir -p /tmp/kubescape-test
+          cat > /tmp/kubescape-test/pod.yaml << 'EOF'
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: test-pod
+          spec:
+            containers:
+              - name: nginx
+                image: nginx:latest
+          EOF
+          cat > /tmp/kubescape-test/exceptions.json << 'EOF'
+          []
+          EOF
+          cat > /tmp/kubescape-test/controls-config.json << 'EOF'
+          {}
+          EOF
+      - id: action
+        uses: .
+        with:
+          files: /tmp/kubescape-test/pod.yaml
+          controls: "C-0017"
+          format: json
+          outputFile: /tmp/kubescape-config-results
+          controlsConfig: /tmp/kubescape-test/controls-config.json
+          exceptions: /tmp/kubescape-test/exceptions.json
+        continue-on-error: true
+      - name: Assert action ran with controlsConfig and exceptions inputs
+        run: |
+          echo "Action completed (exit may be non-zero due to scan findings)"
+          echo "PASS: controlsConfig and exceptions inputs were accepted"

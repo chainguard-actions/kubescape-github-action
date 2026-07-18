@@ -6,22 +6,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Run Kubescape framework scan
-        id: action
+
+      - name: Run Kubescape scan with NSA framework
+        id: scan
+        continue-on-error: true
         uses: .
         with:
-          files: pristine/kubescape--github-action/v3.0.1-fix/tests/fixtures/k8s/deployment.yaml
+          files: tests/fixtures/k8s/deployment.yaml
           frameworks: NSA
-          format: json
-          outputFile: results
-        continue-on-error: true
+          format: junit
+          outputFile: results-nsa
+          severityThreshold: critical
+
       - name: Assert results file was created
         run: |
-          echo "Checking for results file..."
-          if [ ! -f results.json ]; then
-            echo "FAIL: results.json not found"
+          echo "Checking for results-nsa.xml (junit format)"
+          if [ ! -f results-nsa.xml ]; then
+            echo "FAIL: results-nsa.xml not found"
             ls -la || true
             exit 1
           fi
-          echo "PASS: results.json exists"
-          echo "File size: $(wc -c < results.json) bytes"
+          echo "PASS: results-nsa.xml exists"
+          cat results-nsa.xml | head -20

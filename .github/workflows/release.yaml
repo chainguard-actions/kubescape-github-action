@@ -18,17 +18,19 @@ jobs:
     steps:
     - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
     - name: Update repo
+      env:
+        REPOSITORY: ${{ github.repository }}
       run: |
         . ./update.sh
         safe_latest=$(printf '%s' "${LATEST}" | tr -d '\n\r')
         safe_current=$(printf '%s' "${CURRENT}" | tr -d '\n\r')
-        echo "latest=${safe_latest}" >> "$GITHUB_ENV"
-        echo "current=${safe_current}" >> "$GITHUB_ENV"
-        git clone https://github.com/$GITHUB_REPOSITORY github-action; cd github-action
-        export RELEASE=$(git for-each-ref --format="%(refname:short)" --sort=-authordate --count=1 refs/tags || true)
-        rm -rf github-action
+        echo "latest=${safe_latest}" >> $GITHUB_ENV
+        echo "current=${safe_current}" >> $GITHUB_ENV
+        git clone https://github.com/"${REPOSITORY}" github-action; cd github-action
+        RELEASE=$(git for-each-ref --format="%(refname:short)" --sort=-authordate --count=1 refs/tags || true)
+        rm -rf ../github-action
         safe_release=$(printf '%s' "${RELEASE}" | tr -d '\n\r')
-        echo "release=${safe_release}" >> "$GITHUB_ENV"
+        echo "release=${safe_release}" >> $GITHUB_ENV
     - uses: peter-evans/create-pull-request@38e0b6e68b4c852a5500a94740f0e535e0d7ba54 # v4
       if: env.latest != env.current
       with:
