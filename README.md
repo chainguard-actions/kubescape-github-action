@@ -10,6 +10,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 |---------|-----|-----------------|
 | v3.0.1 | [`v3.0.1`](https://github.com/chainguard-actions/kubescape-github-action/tree/v3.0.1) | [`1dd909c`](https://github.com/kubescape/github-action/commit/1dd909c626c3310e11d2fe6d3e39327620f28e68) |
 | v3.0.1-fix | [`v3.0.1-fix`](https://github.com/chainguard-actions/kubescape-github-action/tree/v3.0.1-fix) | [`bf31867`](https://github.com/kubescape/github-action/commit/bf318675e7a74a5074ccb478584c7830b06bf998) |
+| v3.0.4 | [`v3.0.4`](https://github.com/chainguard-actions/kubescape-github-action/tree/v3.0.4) | [`1c87cda`](https://github.com/kubescape/github-action/commit/1c87cda9938f1966bc59d0d454b1444d3210a47a) |
 | v3.0.5 | [`v3.0.5`](https://github.com/chainguard-actions/kubescape-github-action/tree/v3.0.5) | [`c91feb3`](https://github.com/kubescape/github-action/commit/c91feb3b8dd145ff8a094f91d6836bba4abc4293) |
 
 ## Privacy
