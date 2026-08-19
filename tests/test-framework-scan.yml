@@ -8,21 +8,28 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Run Kubescape scan with NSA framework
-        id: action
+        id: scan
+        continue-on-error: true
         uses: .
         with:
+          files: tests/fixtures/k8s/deployment.yaml
           frameworks: NSA
-          files: pristine/kubescape--github-action/v3.0.1/tests/fixtures/k8s/deployment.yaml
-          format: junit
+          format: json
           outputFile: results-nsa
-          severityThreshold: critical
-        continue-on-error: true
+          # High threshold so the step doesn't fail the job
+          failedThreshold: "100"
+          severityThreshold: "critical"
 
-      - name: Assert framework scan ran
+      - name: Assert scan produced JSON output file
         run: |
-          echo "Checking that kubescape framework scan ran..."
-          if [ "${{ steps.action.outcome }}" = "skipped" ]; then
-            echo "FAIL: action step was skipped unexpectedly"
+          echo "Checking for results-nsa.json (json format)"
+          if [ ! -f results-nsa.json ]; then
+            echo "FAIL: results-nsa.json not found"
+            ls -la || true
             exit 1
           fi
-          echo "PASS: framework scan ran with outcome: ${{ steps.action.outcome }}"
+          echo "PASS: results-nsa.json exists"
+          echo "--- File size ---"
+          wc -c results-nsa.json
+          echo "--- First 10 lines ---"
+          head -10 results-nsa.json || true

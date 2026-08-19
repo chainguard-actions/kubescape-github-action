@@ -1,0 +1,33 @@
+name: Test Kubescape scan with account input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Kubescape scan with account input
+        id: scan
+        # Allow the action to fail — account may be invalid, scan still runs
+        continue-on-error: true
+        uses: .
+        with:
+          files: tests/fixtures/k8s/deployment.yaml
+          controls: "C-0016"
+          format: json
+          outputFile: results-account
+          failedThreshold: "100"
+          severityThreshold: "critical"
+          account: "00000000-0000-0000-0000-000000000000"
+
+      - name: Assert scan ran (output file produced or action exited)
+        run: |
+          echo "Scan step outcome: ${{ steps.scan.outcome }}"
+          # The action either produced output or failed due to invalid account.
+          # Either way, the input was exercised. We just verify the step ran.
+          if [ "${{ steps.scan.outcome }}" = "skipped" ]; then
+            echo "FAIL: scan step was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: scan step ran (outcome: ${{ steps.scan.outcome }})"

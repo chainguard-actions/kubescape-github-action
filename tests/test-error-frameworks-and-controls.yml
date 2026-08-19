@@ -1,4 +1,4 @@
-name: Test Kubescape error when both frameworks and controls specified
+name: Test Kubescape error - frameworks and controls both specified
 on:
   workflow_dispatch:
 jobs:
@@ -8,23 +8,23 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Run Kubescape with both frameworks and controls (should fail)
-        id: action
+        id: scan
+        continue-on-error: true
         uses: .
         with:
+          files: tests/fixtures/k8s/deployment.yaml
           frameworks: NSA
           controls: "C-0001"
-          files: pristine/kubescape--github-action/v3.0.1/tests/fixtures/k8s/deployment.yaml
           format: junit
           outputFile: results-error
-        continue-on-error: true
 
       - name: Assert action failed as expected
+        env:
+          OUTCOME: ${{ steps.scan.outcome }}
         run: |
-          echo "Checking that action failed when both frameworks and controls were specified..."
-          OUTCOME="${{ steps.action.outcome }}"
-          echo "actual outcome: $OUTCOME"
+          echo "Step outcome: $OUTCOME"
           if [ "$OUTCOME" != "failure" ]; then
-            echo "FAIL: expected action to fail but got outcome: $OUTCOME"
+            echo "FAIL: expected action to fail when both frameworks and controls are specified, but outcome was '$OUTCOME'"
             exit 1
           fi
           echo "PASS: action correctly failed when both frameworks and controls were specified"

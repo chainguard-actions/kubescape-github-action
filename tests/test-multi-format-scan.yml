@@ -1,0 +1,44 @@
+name: Test Kubescape multi-format scan
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Kubescape scan with multiple output formats
+        id: scan
+        continue-on-error: true
+        uses: .
+        with:
+          files: tests/fixtures/k8s/deployment.yaml
+          format: "sarif,json"
+          outputFile: results-multi
+          # High threshold so the step doesn't fail the job
+          failedThreshold: "100"
+          severityThreshold: "critical"
+
+      - name: Assert scan produced SARIF output file
+        run: |
+          echo "Checking for results-multi.sarif"
+          if [ ! -f results-multi.sarif ]; then
+            echo "FAIL: results-multi.sarif not found"
+            ls -la || true
+            exit 1
+          fi
+          echo "PASS: results-multi.sarif exists"
+          echo "--- File size ---"
+          wc -c results-multi.sarif
+
+      - name: Assert scan produced JSON output file
+        run: |
+          echo "Checking for results-multi.json"
+          if [ ! -f results-multi.json ]; then
+            echo "FAIL: results-multi.json not found"
+            ls -la || true
+            exit 1
+          fi
+          echo "PASS: results-multi.json exists"
+          echo "--- File size ---"
+          wc -c results-multi.json

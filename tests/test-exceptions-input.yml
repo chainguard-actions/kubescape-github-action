@@ -1,4 +1,4 @@
-name: Test Kubescape controls scan
+name: Test Kubescape scan with exceptions input
 on:
   workflow_dispatch:
 jobs:
@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Run Kubescape scan with specific control
+      - name: Run Kubescape scan with exceptions input
         id: scan
         continue-on-error: true
         uses: .
@@ -15,21 +15,21 @@ jobs:
           files: tests/fixtures/k8s/deployment.yaml
           controls: "C-0016"
           format: json
-          outputFile: results-controls
-          # High threshold so the step doesn't fail the job
+          outputFile: results-exceptions
           failedThreshold: "100"
           severityThreshold: "critical"
+          exceptions: tests/fixtures/exceptions.json
 
       - name: Assert scan produced JSON output file
         run: |
-          echo "Checking for results-controls.json (json format)"
-          if [ ! -f results-controls.json ]; then
-            echo "FAIL: results-controls.json not found"
+          echo "Scan step outcome: ${{ steps.scan.outcome }}"
+          if [ ! -f results-exceptions.json ]; then
+            echo "FAIL: results-exceptions.json not found"
             ls -la || true
             exit 1
           fi
-          echo "PASS: results-controls.json exists"
+          echo "PASS: results-exceptions.json exists"
           echo "--- File size ---"
-          wc -c results-controls.json
+          wc -c results-exceptions.json
           echo "--- First 10 lines ---"
-          head -10 results-controls.json || true
+          head -10 results-exceptions.json || true
