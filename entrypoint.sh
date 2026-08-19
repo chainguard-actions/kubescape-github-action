@@ -59,6 +59,11 @@ if [ -n "${INPUT_CONTROLS}" ]; then
   controls=$(echo "${controls%?}")
 fi
 
+frameworks_cmd=$([ -n "${INPUT_FRAMEWORKS}" ] && echo "framework ${INPUT_FRAMEWORKS}" || echo "")
+controls_cmd=$([ -n "${INPUT_CONTROLS}" ] && echo control "${controls}" || echo "")
+
+scan_input=$([ -n "${INPUT_FILES}" ] && echo "${INPUT_FILES}" || echo .)
+
 output_formats="${INPUT_FORMAT}"
 have_json_format="false"
 if [ -n "${output_formats}" ] && contains "${output_formats}" "json"; then
@@ -68,6 +73,16 @@ fi
 verbose=""
 if [ -n "${INPUT_VERBOSE}" ] && [ "${INPUT_VERBOSE}" != "false" ]; then
   verbose="--verbose"
+fi
+
+exceptions=""
+if [ -n "$INPUT_EXCEPTIONS" ]; then
+  exceptions="--exceptions ${INPUT_EXCEPTIONS}"
+fi
+
+controls_config=""
+if [ -n "$INPUT_CONTROLSCONFIG" ]; then
+  controls_config="--controls-config ${INPUT_CONTROLSCONFIG}"
 fi
 
 should_fix_files="false"
@@ -81,19 +96,36 @@ if [ "${should_fix_files}" = "true" ] && [ "${have_json_format}" != "true" ]; th
   output_formats="${output_formats},json"
 fi
 
-output_file="${INPUT_OUTPUTFILE:-results}"
+output_file=$([ -n "${INPUT_OUTPUTFILE}" ] && echo "${INPUT_OUTPUTFILE}" || echo "results")
+
+account_opt=$([ -n "${INPUT_ACCOUNT}" ] && echo --account "${INPUT_ACCOUNT}" || echo "")
+access_key_opt=$([ -n "${INPUT_ACCESSKEY}" ] && echo --access-key "${INPUT_ACCESSKEY}" || echo "")
+server_opt=$([ -n "${INPUT_SERVER}" ] && echo --server "${INPUT_SERVER}" || echo "")
+
+# If account ID is empty, we load artifacts from the local path, otherwise we
+# load from the cloud (this will enable custom framework support)
+artifacts_path="/home/ks/.kubescape"
+artifacts_opt=$([ -n "${INPUT_ACCOUNT}" ] && echo "" || echo --use-artifacts-from "${artifacts_path}")
 
 if [ -n "${INPUT_FAILEDTHRESHOLD}" ] && [ -n "${INPUT_COMPLIANCETHRESHOLD}" ]; then
   echo "Both failedThreshold and complianceThreshold are specified. Please specify either one of them or neither"
   exit 1
 fi
 
+fail_threshold_opt=$([ -n "${INPUT_FAILEDTHRESHOLD}" ] && echo --fail-threshold "${INPUT_FAILEDTHRESHOLD}" || echo "")
+compliance_threshold_opt=$([ -n "${INPUT_COMPLIANCETHRESHOLD}" ] && echo --compliance-threshold "${INPUT_COMPLIANCETHRESHOLD}" || echo "")
+
 # When a user requests to fix files, the action should not fail because the
 # results exceed severity. This is subject to change in the future.
+severity_threshold_opt=$(
+  [ -n "${INPUT_SEVERITYTHRESHOLD}" ] &&
+    [ "${should_fix_files}" = "false" ] &&
+    echo --severity-threshold "${INPUT_SEVERITYTHRESHOLD}" ||
+    echo ""
+)
 
 # Handle image scanning request
-image_subcmd_args=""
-scan_input="${INPUT_FILES:-.}"
+image_subcmd=""
 echo "image is <${INPUT_IMAGE}>"
 if [ -n "${INPUT_IMAGE}" ]; then
 
@@ -101,94 +133,39 @@ if [ -n "${INPUT_IMAGE}" ]; then
   # images from the container runtime daemon
   image_arg="${INPUT_IMAGE}"
 
+  severity_threshold_opt=$(
+    [ -n "${INPUT_SEVERITYTHRESHOLD}" ] &&
+      echo --severity-threshold "${INPUT_SEVERITYTHRESHOLD}" ||
+      echo ""
+  )
+
+  auth_opts=""
   if [ -n "${INPUT_REGISTRYUSERNAME}" ] && [ -n "${INPUT_REGISTRYPASSWORD}" ]; then
+    auth_opts="--username=${INPUT_REGISTRYUSERNAME} --password=${INPUT_REGISTRYPASSWORD}"
+
     # When trying to authenticate, we cannot assume that the runner has access
     # to an *authenticated* container runtime daemon, so we should always try
     # to pull images from the registry
     image_arg="registry://${image_arg}"
-    image_subcmd_args="image_with_auth"
   else
     echo "NOTICE: Received no registry credentials, pulling without authentication."
     printf "Hint: If you provide credentials, make sure you include both the username and password.\n\n"
-    image_subcmd_args="image_no_auth"
   fi
 
+  # Build the image scanning subcommand with options
+  image_subcmd="image ${auth_opts}"
   # Override the scan input
   scan_input="${image_arg}"
-  echo "Scan subcommand: image"
+  echo "Scan subcommand: ${image_subcmd}"
 fi
 
-# Build the kubescape scan command using positional parameters to avoid eval
-# and shell injection. Each argument is passed as a separate word.
-set -- kubescape scan
+# TODO: include artifacts_opt once https://github.com/kubescape/kubescape/issues/1040 is resolved
+scan_command="kubescape scan ${image_subcmd} ${frameworks_cmd} ${controls_cmd} ${scan_input} ${account_opt} ${access_key_opt} ${server_opt} ${fail_threshold_opt} ${compliance_threshold_opt} ${severity_threshold_opt} --format ${output_formats} --output ${output_file} ${verbose} ${exceptions} ${controls_config}"
 
-# Add image subcommand and auth options if scanning an image
-if [ "${image_subcmd_args}" = "image_with_auth" ]; then
-  set -- "$@" image \
-    "--username=${INPUT_REGISTRYUSERNAME}" \
-    "--password=${INPUT_REGISTRYPASSWORD}"
-elif [ "${image_subcmd_args}" = "image_no_auth" ]; then
-  set -- "$@" image
-fi
-
-# Add framework or control subcommand
-if [ -n "${INPUT_FRAMEWORKS}" ]; then
-  set -- "$@" framework "${INPUT_FRAMEWORKS}"
-elif [ -n "${INPUT_CONTROLS}" ]; then
-  set -- "$@" control "${controls}"
-fi
-
-# Add scan input (files or image)
-set -- "$@" "${scan_input}"
-
-# Add account/access-key/server options
-if [ -n "${INPUT_ACCOUNT}" ]; then
-  set -- "$@" --account "${INPUT_ACCOUNT}"
-fi
-if [ -n "${INPUT_ACCESSKEY}" ]; then
-  set -- "$@" --access-key "${INPUT_ACCESSKEY}"
-fi
-if [ -n "${INPUT_SERVER}" ]; then
-  set -- "$@" --server "${INPUT_SERVER}"
-fi
-
-# Add threshold options (mutually exclusive, already validated above)
-if [ -n "${INPUT_FAILEDTHRESHOLD}" ]; then
-  set -- "$@" --fail-threshold "${INPUT_FAILEDTHRESHOLD}"
-fi
-if [ -n "${INPUT_COMPLIANCETHRESHOLD}" ]; then
-  set -- "$@" --compliance-threshold "${INPUT_COMPLIANCETHRESHOLD}"
-fi
-
-# Add severity threshold (skip when fixing files)
-if [ -n "${INPUT_SEVERITYTHRESHOLD}" ] && [ "${should_fix_files}" = "false" ]; then
-  set -- "$@" --severity-threshold "${INPUT_SEVERITYTHRESHOLD}"
-elif [ -n "${INPUT_SEVERITYTHRESHOLD}" ] && [ -n "${INPUT_IMAGE}" ]; then
-  # Image scans always apply severity threshold
-  set -- "$@" --severity-threshold "${INPUT_SEVERITYTHRESHOLD}"
-fi
-
-# Add format and output file
-set -- "$@" --format "${output_formats}" --output "${output_file}"
-
-# Add verbose flag
-if [ -n "${verbose}" ]; then
-  set -- "$@" "${verbose}"
-fi
-
-# Add exceptions
-if [ -n "${INPUT_EXCEPTIONS}" ]; then
-  set -- "$@" --exceptions "${INPUT_EXCEPTIONS}"
-fi
-
-# Add controls config
-if [ -n "${INPUT_CONTROLSCONFIG}" ]; then
-  set -- "$@" --controls-config "${INPUT_CONTROLSCONFIG}"
-fi
-
-echo "Running: $*"
-"$@"
+echo "${scan_command}"
+eval "${scan_command}"
 
 if [ "$should_fix_files" = "true" ]; then
-  kubescape fix --no-confirm "${output_file}.json"
+  fix_command="kubescape fix --no-confirm ${output_file}.json"
+  eval "${fix_command}"
 fi

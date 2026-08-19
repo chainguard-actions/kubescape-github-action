@@ -8,28 +8,66 @@
 
 **Test Policy SHA:** `843adf9e4b8f85d0c08b27b9d0b09dd094b54702`
 
-**Harden Agent Version:** `1`
+**Harden Agent Version:** `2`
 
-Action **kubescape--github-action/v3.0.5** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
+Action **kubescape--github-action/v3.0.5** was hardened automatically. 2 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
-### script-injection (severity: high)
+### unpinned-uses (severity: high)
 
-entrypoint.sh builds a shell command string by interpolating user-controlled action inputs (INPUT_FRAMEWORKS, INPUT_CONTROLS, INPUT_FILES, INPUT_IMAGE, INPUT_REGISTRYUSERNAME, INPUT_REGISTRYPASSWORD, INPUT_ACCOUNT, INPUT_ACCESSKEY, INPUT_SERVER, INPUT_FORMAT, INPUT_OUTPUTFILE, INPUT_EXCEPTIONS, INPUT_CONTROLSCONFIG, INPUT_SEVERITYTHRESHOLD, INPUT_FAILEDTHRESHOLD, INPUT_COMPLIANCETHRESHOLD) unquoted into the `scan_command` variable, then executes it with `eval "${scan_command}"`. Because the inputs are not quoted when embedded in the command string, an attacker who controls any of these inputs can inject shell metacharacters (`;`, `|`, `&`, `$(...)`, backticks) to execute arbitrary commands. Rule (b): unquoted shell variable expansion of untrusted/user-controlled data. Offending line: `scan_command="kubescape scan ${image_subcmd} ${frameworks_cmd} ${controls_cmd} ${scan_input} ..."` followed by `eval "${scan_command}"`. A second `eval` on `fix_command` also interpolates the unquoted `${output_file}` (derived from `INPUT_OUTPUTFILE`).
+Multiple workflow files reference actions using mutable tags or branch names instead of full 40-character commit SHAs, making them vulnerable to supply-chain attacks.
+
+example-fix-commit.yaml: actions/checkout@v3, tj-actions/changed-files@v35, kubescape/github-action@main, peter-evans/create-pull-request@v4
+example-fix-pr-review.yaml: actions/checkout@v3, tj-actions/changed-files@v35, kubescape/github-action@main, HollowMan6/sarif4reviewdog@v1.0.0
+example-scan-image.yaml: actions/checkout@v3, kubescape/github-action@main, github/codeql-action/upload-sarif@v2
+example-scan.yaml: actions/checkout@v3, kubescape/github-action@main, github/codeql-action/upload-sarif@v2
+release.yaml: actions/checkout@v3, peter-evans/create-pull-request@v4
 
 Locations:
 
-- `entrypoint.sh:155`
-- `entrypoint.sh:159`
+- `.github/workflows/example-fix-commit.yaml:14`
+- `.github/workflows/example-fix-commit.yaml:19`
+- `.github/workflows/example-fix-commit.yaml:20`
+- `.github/workflows/example-fix-commit.yaml:27`
+- `.github/workflows/example-fix-pr-review.yaml:12`
+- `.github/workflows/example-fix-pr-review.yaml:19`
+- `.github/workflows/example-fix-pr-review.yaml:20`
+- `.github/workflows/example-fix-pr-review.yaml:29`
+- `.github/workflows/example-scan-image.yaml:11`
+- `.github/workflows/example-scan-image.yaml:12`
+- `.github/workflows/example-scan-image.yaml:28`
+- `.github/workflows/example-scan.yaml:11`
+- `.github/workflows/example-scan.yaml:12`
+- `.github/workflows/example-scan.yaml:22`
+- `.github/workflows/release.yaml:19`
+- `.github/workflows/release.yaml:28`
+
+### script-injection (severity: high)
+
+Sub-rule (a): In release.yaml, the run: block directly interpolates the GitHub Actions expression `${{ github.repository }}` inside a shell command string. This allows the value to be interpreted by the shell before quoting can occur. Offending line: `git clone https://github.com/${{ github.repository }} github-action; cd github-action`
+
+Locations:
+
+- `.github/workflows/release.yaml:25`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** script-injection
+**Fixes applied:** unpinned-uses, script-injection
 
 **Notes:**
 
-Fixed script injection in entrypoint.sh by replacing the eval-based command construction with POSIX sh positional parameter accumulation. The original code built a `scan_command` string by interpolating unquoted user-controlled INPUT_* variables and executed it with `eval "${scan_command}"`, allowing shell metacharacter injection. The fix uses `set -- kubescape scan` followed by conditional `set -- "$@" --flag "${INPUT_VALUE}"` calls to safely append each argument as a separate quoted word, then executes with `"$@"` directly. The `kubescape fix` call at the end was also simplified to directly pass `"${output_file}.json"` without eval. All user-controlled inputs are now properly isolated as individual arguments, preventing injection of shell metacharacters.
+Fixed all 5 workflow files:
+
+1. example-fix-commit.yaml: Pinned actions/checkout@v3, tj-actions/changed-files@v35, kubescape/github-action@main, peter-evans/create-pull-request@v4 to full commit SHAs.
+
+2. example-fix-pr-review.yaml: Pinned actions/checkout@v3, tj-actions/changed-files@v35, kubescape/github-action@main, HollowMan6/sarif4reviewdog@v1.0.0 to full commit SHAs.
+
+3. example-scan-image.yaml: Pinned actions/checkout@v3, kubescape/github-action@main, github/codeql-action/upload-sarif@v2 to full commit SHAs.
+
+4. example-scan.yaml: Pinned actions/checkout@v3, kubescape/github-action@main, github/codeql-action/upload-sarif@v2 to full commit SHAs.
+
+5. release.yaml: Pinned actions/checkout@v3 and peter-evans/create-pull-request@v4 to full commit SHAs. Fixed script-injection by moving ${{ github.repository }} into the step's env block as GH_REPOSITORY and referencing it as "$GH_REPOSITORY" in the shell command.
 

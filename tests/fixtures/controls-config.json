@@ -1,3 +1,5 @@
 {
-  "comment": "Empty controls configuration"
+  "settings": {
+    "postureControlInputs": {}
+  }
 }

@@ -1,4 +1,4 @@
-name: Test error when both failedThreshold and complianceThreshold specified
+name: Test error - both failedThreshold and complianceThreshold specified
 on:
   workflow_dispatch:
 jobs:
@@ -6,24 +6,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Run Kubescape with both thresholds (should fail)
-        id: action
+
+      - name: Set up git origin reachable inside the Docker container
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+          rm -rf "$GITHUB_WORKSPACE/.git-remote"
+          git init --bare "$GITHUB_WORKSPACE/.git-remote"
+          git push "$GITHUB_WORKSPACE/.git-remote" HEAD:refs/heads/act-harness
+          git remote set-url origin "$GITHUB_WORKSPACE/.git-remote" 2>/dev/null || \
+            git remote add origin "$GITHUB_WORKSPACE/.git-remote"
+
+      - id: scan
+        name: Run Kubescape scan with both thresholds (should fail)
         uses: .
         with:
-          files: pristine/kubescape--github-action/v3.0.5/tests/fixtures/k8s/deployment.yaml
+          files: tests/fixtures/manifests/deployment.yaml
           frameworks: NSA
-          failedThreshold: "50"
-          complianceThreshold: "50"
+          failedThreshold: 50
+          complianceThreshold: 80
           format: junit
-          outputFile: results
+          outputFile: results-threshold-error
         continue-on-error: true
-      - name: Assert action failed with expected error
+
+      - name: Assert scan step failed as expected
         env:
-          OUTCOME: ${{ steps.action.outcome }}
+          OUTCOME: ${{ steps.scan.outcome }}
         run: |
-          echo "outcome: $OUTCOME"
-          if [ "$OUTCOME" != "failure" ]; then
-            echo "FAIL: Expected action to fail when both failedThreshold and complianceThreshold are specified, but got outcome: $OUTCOME"
+          echo "Step outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action correctly failed when both failedThreshold and complianceThreshold were specified"
+          else
+            echo "FAIL: expected action to fail when both thresholds are specified, but got outcome: $OUTCOME"
             exit 1
           fi
-          echo "PASS: Action correctly failed when both thresholds were specified"

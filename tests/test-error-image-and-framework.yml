@@ -1,4 +1,4 @@
-name: Test verbose scan mode
+name: Test error - image and framework both specified
 on:
   workflow_dispatch:
 jobs:
@@ -18,24 +18,23 @@ jobs:
             git remote add origin "$GITHUB_WORKSPACE/.git-remote"
 
       - id: scan
-        name: Run Kubescape scan in verbose mode
+        name: Run Kubescape scan with both image and framework (should fail)
         uses: .
         with:
-          files: tests/fixtures/manifests/deployment.yaml
+          image: nginx:latest
           frameworks: NSA
           format: junit
-          outputFile: results-verbose
-          verbose: "true"
-          failedThreshold: 100
-          severityThreshold: critical
+          outputFile: results-image-error
         continue-on-error: true
 
-      - name: Assert verbose scan step ran
+      - name: Assert scan step failed as expected
+        env:
+          OUTCOME: ${{ steps.scan.outcome }}
         run: |
-          echo "Checking that the verbose scan step completed..."
-          if ls results-verbose* 2>/dev/null | head -1; then
-            echo "PASS: results file was created for verbose scan"
+          echo "Step outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action correctly failed when both image and framework were specified"
           else
-            echo "INFO: No results file found, but scan step completed"
-            echo "PASS: verbose scan step executed"
+            echo "FAIL: expected action to fail when both image and framework are specified, but got outcome: $OUTCOME"
+            exit 1
           fi
