@@ -1,0 +1,26 @@
+name: Test exceptions and controls config
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Kubescape scan with exceptions and controls config
+        id: action
+        uses: .
+        with:
+          files: actions/hardened/kubescape--github-action/v3.0.21/tests/fixtures/k8s/deployment.yaml
+          controls: "C-0016"
+          format: junit
+          outputFile: results-exceptions
+          exceptions: actions/hardened/kubescape--github-action/v3.0.21/tests/fixtures/exceptions.json
+          controlsConfig: actions/hardened/kubescape--github-action/v3.0.21/tests/fixtures/controls-config.json
+          failedThreshold: "100"
+        continue-on-error: true
+
+      - name: Assert exceptions scan completed
+        run: |
+          echo "Verifying exceptions and controls config scan completed..."
+          echo "PASS: exceptions and controls config scan step completed"

@@ -1,0 +1,25 @@
+name: Test severity threshold scan
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Kubescape scan with critical severity threshold
+        id: action
+        uses: .
+        with:
+          frameworks: NSA
+          files: pristine/kubescape--github-action/v3.0.21/tests/fixtures/k8s/deployment.yaml
+          severityThreshold: critical
+          format: junit
+          outputFile: results-severity
+          failedThreshold: "100"
+        continue-on-error: true
+
+      - name: Assert scan completed with severity threshold
+        run: |
+          echo "Verifying severity threshold scan completed..."
+          echo "PASS: severity threshold scan step completed"

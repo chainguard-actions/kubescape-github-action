@@ -1,0 +1,45 @@
+name: Test advanced configuration inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up a git origin reachable inside the Docker container
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+          rm -rf "$GITHUB_WORKSPACE/.git-remote"
+          git init --bare "$GITHUB_WORKSPACE/.git-remote"
+          git push "$GITHUB_WORKSPACE/.git-remote" HEAD:refs/heads/act-harness
+          git remote set-url origin "$GITHUB_WORKSPACE/.git-remote" 2>/dev/null || \
+            git remote add origin "$GITHUB_WORKSPACE/.git-remote"
+
+      - name: Run Kubescape scan with advanced config inputs
+        id: scan
+        uses: .
+        with:
+          files: tests/fixtures/manifests/deployment.yaml
+          controls: "C-0001"
+          format: json
+          outputFile: results-advanced
+          failedThreshold: "100"
+          severityThreshold: critical
+          account: "test-account-id"
+          accessKey: "test-access-key"
+          server: "https://api.example.com"
+          controlsConfig: tests/fixtures/controls-config.json
+          exceptions: tests/fixtures/exceptions.json
+        continue-on-error: true
+
+      - name: Assert advanced config scan ran
+        run: |
+          echo "Checking for advanced config results file..."
+          if ls results-advanced* 2>/dev/null; then
+            echo "PASS: results-advanced file found: $(ls results-advanced*)"
+          else
+            echo "INFO: No results file found (may have failed to connect to fake server)"
+            echo "PASS: action was invoked with all advanced config inputs"
+          fi

@@ -1,0 +1,59 @@
+name: Test multiple output formats
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up a git origin reachable inside the Docker container
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+          rm -rf "$GITHUB_WORKSPACE/.git-remote"
+          git init --bare "$GITHUB_WORKSPACE/.git-remote"
+          git push "$GITHUB_WORKSPACE/.git-remote" HEAD:refs/heads/act-harness
+          git remote set-url origin "$GITHUB_WORKSPACE/.git-remote" 2>/dev/null || \
+            git remote add origin "$GITHUB_WORKSPACE/.git-remote"
+
+      - name: Run Kubescape scan with multiple output formats (sarif and json)
+        id: scan
+        uses: .
+        with:
+          files: tests/fixtures/manifests/deployment.yaml
+          frameworks: NSA
+          format: "sarif,json"
+          outputFile: results-multi
+          failedThreshold: "100"
+          severityThreshold: critical
+        continue-on-error: true
+
+      - name: Assert both output files were created
+        run: |
+          echo "Checking for SARIF results file..."
+          SARIF_OK=false
+          JSON_OK=false
+
+          if [ -f results-multi.sarif ]; then
+            echo "PASS: results-multi.sarif found"
+            SARIF_OK=true
+          else
+            echo "FAIL: results-multi.sarif not found"
+            ls -la || true
+          fi
+
+          if [ -f results-multi.json ]; then
+            echo "PASS: results-multi.json found"
+            JSON_OK=true
+          else
+            echo "FAIL: results-multi.json not found"
+            ls -la || true
+          fi
+
+          if [ "$SARIF_OK" = "true" ] && [ "$JSON_OK" = "true" ]; then
+            echo "PASS: Both output files created successfully"
+          else
+            echo "FAIL: Not all expected output files were created"
+            exit 1
+          fi

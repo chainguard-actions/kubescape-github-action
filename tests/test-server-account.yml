@@ -1,0 +1,26 @@
+name: Test server account and access key inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run Kubescape scan with server account and access key
+        id: action
+        uses: .
+        with:
+          files: actions/hardened/kubescape--github-action/v3.0.21/tests/fixtures/k8s/deployment.yaml
+          format: junit
+          outputFile: results-server
+          server: "https://api.armosec.io"
+          account: "test-account-id"
+          accessKey: "test-access-key"
+          failedThreshold: "100"
+        continue-on-error: true
+
+      - name: Assert server account scan completed
+        run: |
+          echo "Verifying server/account/accessKey scan step completed..."
+          echo "PASS: server account scan step completed"

@@ -1,0 +1,42 @@
+name: Test error when both failedThreshold and complianceThreshold specified
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up a git origin reachable inside the Docker container
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+          rm -rf "$GITHUB_WORKSPACE/.git-remote"
+          git init --bare "$GITHUB_WORKSPACE/.git-remote"
+          git push "$GITHUB_WORKSPACE/.git-remote" HEAD:refs/heads/act-harness
+          git remote set-url origin "$GITHUB_WORKSPACE/.git-remote" 2>/dev/null || \
+            git remote add origin "$GITHUB_WORKSPACE/.git-remote"
+
+      - name: Run Kubescape scan with both failedThreshold and complianceThreshold (should fail)
+        id: scan
+        uses: .
+        with:
+          files: tests/fixtures/manifests/deployment.yaml
+          frameworks: NSA
+          failedThreshold: "50"
+          complianceThreshold: "50"
+          format: junit
+          outputFile: results-threshold-error
+        continue-on-error: true
+
+      - name: Assert action failed as expected
+        env:
+          OUTCOME: ${{ steps.scan.outcome }}
+        run: |
+          echo "Step outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action correctly failed when both failedThreshold and complianceThreshold were specified"
+          else
+            echo "FAIL: expected action to fail but got outcome: $OUTCOME"
+            exit 1
+          fi

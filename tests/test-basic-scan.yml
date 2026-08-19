@@ -1,0 +1,47 @@
+name: Test basic scan with default frameworks
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up a git origin reachable inside the Docker container
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+          rm -rf "$GITHUB_WORKSPACE/.git-remote"
+          git init --bare "$GITHUB_WORKSPACE/.git-remote"
+          git push "$GITHUB_WORKSPACE/.git-remote" HEAD:refs/heads/act-harness
+          git remote set-url origin "$GITHUB_WORKSPACE/.git-remote" 2>/dev/null || \
+            git remote add origin "$GITHUB_WORKSPACE/.git-remote"
+
+      - name: Run Kubescape scan (basic - all frameworks)
+        id: scan
+        # The action will scan all frameworks by default when none specified.
+        # We expect it to complete (possibly with findings) but not error out.
+        # We use a high failedThreshold so the action doesn't fail due to findings.
+        uses: .
+        with:
+          files: tests/fixtures/manifests/deployment.yaml
+          format: junit
+          outputFile: results
+          failedThreshold: "100"
+          severityThreshold: critical
+        continue-on-error: true
+
+      - name: Assert scan ran (results file created)
+        run: |
+          echo "Checking for results file..."
+          if ls results.xml 2>/dev/null; then
+            echo "PASS: results.xml found"
+          elif ls results.junit 2>/dev/null; then
+            echo "PASS: results.junit found"
+          elif ls results* 2>/dev/null; then
+            echo "PASS: results file found: $(ls results*)"
+          else
+            echo "FAIL: No results file found"
+            ls -la || true
+            exit 1
+          fi

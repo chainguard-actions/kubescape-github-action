@@ -1,0 +1,20 @@
+[
+  {
+    "name": "test-exception",
+    "policyType": "postureExceptions",
+    "actions": ["alertOnly"],
+    "resources": [
+      {
+        "designatorType": "Attributes",
+        "attributes": {
+          "namespace": "test-namespace"
+        }
+      }
+    ],
+    "posturePolicies": [
+      {
+        "frameworkName": "NSA"
+      }
+    ]
+  }
+]

@@ -1,0 +1,47 @@
+name: Test JSON output format
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up a git origin reachable inside the Docker container
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+          rm -rf "$GITHUB_WORKSPACE/.git-remote"
+          git init --bare "$GITHUB_WORKSPACE/.git-remote"
+          git push "$GITHUB_WORKSPACE/.git-remote" HEAD:refs/heads/act-harness
+          git remote set-url origin "$GITHUB_WORKSPACE/.git-remote" 2>/dev/null || \
+            git remote add origin "$GITHUB_WORKSPACE/.git-remote"
+
+      - name: Run Kubescape scan with JSON output
+        id: scan
+        uses: .
+        with:
+          files: tests/fixtures/manifests/deployment.yaml
+          frameworks: NSA
+          format: json
+          outputFile: results-json
+          failedThreshold: "100"
+          severityThreshold: critical
+        continue-on-error: true
+
+      - name: Assert JSON results file was created
+        run: |
+          echo "Checking for JSON results file..."
+          if [ -f results-json.json ]; then
+            echo "PASS: results-json.json found"
+            # Verify it's valid JSON
+            if python3 -c "import json, sys; json.load(open('results-json.json'))" 2>/dev/null; then
+              echo "PASS: results-json.json is valid JSON"
+            else
+              echo "WARN: results-json.json may not be valid JSON, but file exists"
+            fi
+          else
+            echo "FAIL: results-json.json not found"
+            ls -la || true
+            exit 1
+          fi
